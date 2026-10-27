@@ -2,6 +2,7 @@
 Demo: load a bulk (control cells), a drug, run inference, save inputs/outputs.
 """
 import os
+import random
 import argparse
 import pickle
 import json
@@ -30,6 +31,8 @@ def parse_args():
     parser.add_argument("--se_ckpt", type=str,
                         default="path/to/se600m.safetensors")
     parser.add_argument("--output_dir", type=str, default="./demo_output")
+    parser.add_argument("--seed", type=int, default=None,
+                        help="Random seed for control-cell sampling")
     return parser.parse_args()
 
 
@@ -62,11 +65,17 @@ def load_control_bulk(cell_line, data_base_dir, se_inputs_base_dir, set_size):
     gene_ids = torch.from_numpy(gene_mm[chosen].copy())   # [S, L]
     expressions = torch.from_numpy(expr_mm[chosen].copy()).float()  # [S, L]
 
-    return gene_ids, expressions
+    return gene_ids, expressions, chosen
 
 
 def main():
     args = parse_args()
+    if args.seed is not None:
+        random.seed(args.seed)
+        np.random.seed(args.seed)
+        torch.manual_seed(args.seed)
+        torch.cuda.manual_seed_all(args.seed)
+        print(f"Seed: {args.seed}")
     os.makedirs(args.output_dir, exist_ok=True)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -89,7 +98,7 @@ def main():
     print(f"Loaded checkpoint: {args.ckpt}")
 
     # ── Load bulk (control cells) ────────────────────────────────────────────
-    gene_ids, expressions = load_control_bulk(
+    gene_ids, expressions, ctrl_rows = load_control_bulk(
         args.cell_line, args.data_base_dir, args.se_inputs_base_dir, args.set_size
     )
     # model expects [B, S, L]
@@ -119,6 +128,8 @@ def main():
             ctrl_gene.cpu().numpy().astype(np.int32))
     np.save(os.path.join(args.output_dir, "input_ctrl_expressions.npy"),
             ctrl_expr.cpu().numpy().astype(np.float32))
+    np.save(os.path.join(args.output_dir, "input_ctrl_row_indices.npy"),
+            np.asarray(ctrl_rows, dtype=np.int32))
     np.save(os.path.join(args.output_dir, "output_pred_embeddings.npy"),
             pred_embs.cpu().float().numpy())
     np.save(os.path.join(args.output_dir, "output_pred_hvg.npy"),
@@ -126,6 +137,8 @@ def main():
 
     meta = {
         "cell_line": args.cell_line,
+        "seed": args.seed,
+        "control_row_indices": ctrl_rows,
         "drug_smiles": canon_smiles,
         "drug_conc_uM": args.drug_conc,
         "set_size": args.set_size,

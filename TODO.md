@@ -134,3 +134,4 @@ UV_PYTHON_INSTALL_MIRROR=https://mirror.nju.edu.cn/github-release/astral-sh/pyth
 | 2026-10-27 | 目录重组：权重按 encoder/基础模型分子目录（`predictor/`、`mapkg_encoder/`、`molecule_stm/`、`state_se600m/`、`esm2_gene/`）；`PLAN.md` 拆分为 `plan/01~07 + README`；新增 `design/architecture.md` |
 | 2026-10-27 | `se600m.safetensors` 经 hf-mirror 下载完成并校验（2,860,276,816 B（2.66 GiB），sha256 与 HF etag 一致）；M3/P1 关闭 |
 | 2026-10-27 | demo 跑通：新增 `pert_ca.py`、修 `model.py` 两处（类选择 + 标志位）、`STMencoder_ddp.py` 路径与子字典、config 1 行；`strict=True` 499/499；demo 20.05 s / 12.7 GiB |
+| 2026-10-27 | 3.2 完成：`demo.py` 加 `--seed`；**修复双向注意力失效**（transformers 4.4x 强制 causal）；`transformers` 定版 4.43.4；修复 `hvg_info` 标志位；9 个 run 结果见 `plan/05`。新发现：剂量无效（`encode_conc=False`，代码事实）、药物信号仅 ~3e-4（待查） |

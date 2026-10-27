@@ -88,6 +88,8 @@ class PerturbationEncoder_ca(nn.Module):
             kwargs=kw,
         )
         self._ensure_rotary_buffers(kw["head_dim"])
+        self._force_bidirectional_attention()
+        self._dbg_drug = False
 
         self.project_out = ProjectOut(
             hidden_dim=self.dim_emb,
@@ -112,13 +114,51 @@ class PerturbationEncoder_ca(nn.Module):
         layers = getattr(self.transformer_backbone, "layers", None)
         if layers is None:
             return
+        size = max(1, head_dim // 2)
         for layer in layers:
             attn = getattr(layer, "self_attn", None)
-            if attn is None or getattr(attn, "rotary_emb", None) is not None:
+            if attn is None:
                 continue
-            holder = nn.Module()
-            holder.register_buffer("inv_freq", torch.zeros(max(1, head_dim // 2)))
-            attn.add_module("rotary_emb", holder)
+            rotary = getattr(attn, "rotary_emb", None)
+            if rotary is None:
+                holder = nn.Module()
+                holder.register_buffer("inv_freq", torch.zeros(size))
+                attn.add_module("rotary_emb", holder)
+            else:
+                # transformers registers rotary inv_freq as a *non-persistent* buffer,
+                # so it never appears in state_dict while the released checkpoint has it.
+                try:
+                    rotary.register_buffer("inv_freq", torch.zeros(size), persistent=True)
+                except Exception:
+                    pass
+
+    def _force_bidirectional_attention(self):
+        """Llama's SDPA/flash paths pass `is_causal=self.is_causal` with a hard-coded
+        True, so overriding `_update_causal_mask` alone does not make attention
+        bidirectional. Flip the flag on every attention module.
+        """
+        layers = getattr(self.transformer_backbone, "layers", None) or []
+        for layer in layers:
+            attn = getattr(layer, "self_attn", None)
+            if attn is not None and hasattr(attn, "is_causal"):
+                attn.is_causal = False
+        if hasattr(self.transformer_backbone, "is_causal"):
+            self.transformer_backbone.is_causal = False
+
+        # transformers 4.4x computes:
+        #   is_causal = True if causal_mask is None and q_len > 1 else False
+        # so returning None from _update_causal_mask still forces causal attention.
+        # Return an all-zero additive mask instead -> full (bidirectional) attention.
+        import types
+
+        def _zero_additive_mask(self_, attention_mask, input_tensor, cache_position,
+                                past_key_values, output_attentions=False):
+            q = input_tensor.shape[1]
+            return torch.zeros(input_tensor.shape[0], 1, q, q,
+                               dtype=input_tensor.dtype, device=input_tensor.device)
+
+        self.transformer_backbone._update_causal_mask = types.MethodType(
+            _zero_additive_mask, self.transformer_backbone)
 
     def forward(self, gene_tokens, cls_tokens, esm_tokens, smiles, concs):
         B = len(smiles)
@@ -151,7 +191,13 @@ class PerturbationEncoder_ca(nn.Module):
         assert ('' not in smiles) and ('xxx' not in smiles) and (None not in smiles), smiles
         if self.smile_encoder in ('MAP-KG', 'PrimeKG_ver1'):
             with torch.no_grad():
-                return self.drug_projector(self.smiles_encoder(smiles))
+                out = self.drug_projector(self.smiles_encoder(smiles))
+                if os.environ.get("MAP_DEBUG_DRUG"):
+                    import hashlib, numpy as _np
+                    _h = hashlib.md5(_np.ascontiguousarray(
+                        out.detach().cpu().numpy()).tobytes()).hexdigest()[:10]
+                    print(f"[debug-drug] smiles={smiles} md5={_h} norm={float(out.norm()):.4f}", flush=True)
+                return out
         raise ValueError(f"Unsupported smile_encoder: {self.smile_encoder}")
 
     def encode_cells(self, ctrl_embs):
