@@ -9,7 +9,7 @@
 |---|---|---|
 | `01-environment.md` | 运行环境（venv / torch / 依赖 / GPU 验证） | ✅ 已完成 |
 | `02-resources.md` | 资源获取与落位（官方权重、词表、骨干、数据集） | 🔄 阶段一资源已齐；阶段二编码器（BioBERT / ESM-2 650M）待下 |
-| `03-reimplementation.md` | 缺失代码的重新实现（`pert_ca.py` 等补丁） | ⬜ 待做（规格已定） |
+| `03-reimplementation.md` | 缺失代码的重新实现（`pert_ca.py` 等补丁） | ✅ 已完成（`strict=True` 全键匹配） |
 | `04-demo-inference.md` | 3.1 demo 前向（最小闭环） | ⬜ 待做 |
 | `05-reproducibility.md` | 3.2 可复现性与生物学合理性 | ⬜ 待做 |
 | `06-benchmark.md` | 3.3 论文指标级复现 | ⬜ 待做（受 HVG 列表与缺失文件限制） |

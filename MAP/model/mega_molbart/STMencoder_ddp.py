@@ -1,3 +1,4 @@
+import os
 import sys
 from rdkit import Chem
 from pathlib import Path
@@ -13,14 +14,23 @@ from model.mega_molbart.megatron_bart import MegatronBART
 class MolSTM_Extractor(nn.Module):
     def __init__(
         self,
-        ckpt_path = "/mnt/petrelfs/fengjinghao/molecule_model.pth",
-        vocab_path = "/mnt/petrelfs/fengjinghao/CRAFT/VirtualCell/ours_v1/drug/MoleculeSTM/MoleculeSTM/bart_vocab.txt",
+        ckpt_path = os.environ.get("MAP_MOLECULE_CKPT"),
+        vocab_path = os.environ.get("MAP_BART_VOCAB"),
         pretrained=True,
     ):
         super().__init__()
         self.ckpt_path = ckpt_path
         self.vocab_path = vocab_path
         self.pretrained = pretrained
+
+        if not self.ckpt_path or not Path(self.ckpt_path).exists():
+            raise FileNotFoundError(
+                'MolSTM_Extractor needs molecule-encoder weights: set env MAP_MOLECULE_CKPT'
+                ' (mapkg_encoder_v3.pt works), got: %r' % (self.ckpt_path,))
+        if not self.vocab_path or not Path(self.vocab_path).exists():
+            raise FileNotFoundError(
+                'MolSTM_Extractor needs MoleculeSTM vocab: set env MAP_BART_VOCAB, got: %r'
+                % (self.vocab_path,))
 
         self.tokenizer = MolEncTokenizer.from_vocab_file(
             self.vocab_path, REGEX, DEFAULT_CHEM_TOKEN_START
@@ -30,8 +40,18 @@ class MolSTM_Extractor(nn.Module):
         self._model = self._load_model()
 
     def _load_model(self):
-        # 加载 state_dict
-        state_dict = torch.load(self.ckpt_path, map_location="cpu")
+        # load state_dict (accepts: raw MegatronBART dict, {'model_state_dict': ...}, or MAP-KG encoder)
+        state_dict = torch.load(self.ckpt_path, map_location="cpu", weights_only=False)
+        if isinstance(state_dict, dict) and "model_state_dict" in state_dict:
+            state_dict = state_dict["model_state_dict"]
+        if isinstance(state_dict, dict) and "emb.weight" not in state_dict:
+            for pref in ("smiles_encoder._model.", "smiles_encoder.", "_model."):
+                sub = {k[len(pref):]: v for k, v in state_dict.items() if k.startswith(pref)}
+                if "emb.weight" in sub:
+                    print(f"[MolSTM_Extractor] extracted '{pref}*' sub-state "
+                          f"({len(sub)} tensors) from {self.ckpt_path}")
+                    state_dict = sub
+                    break
 
         # tokenizer 和超参
         vocab_size = len(self.tokenizer)

@@ -30,7 +30,7 @@ MAP-KG（14 源, 187k drugs / 23k genes）        控制细胞 bulk → STATE SE
 | 药物投影 `drug_projector` | `MAP/model/components.py::ResidualProjector` | 256 → 1024（hidden 512） | `epoch_3.pt` 的 `pert_model.drug_projector.*`（10 键） |
 | 细胞投影 `cell_projector` | `CellProjector(n_layers=4, d_cell=2048, d_out=1024)` | 2048 → 1024 | `pert_model.cell_projector.*`（8 键） |
 | 基因 token 投影 `gene_tokens_projector` | `ResidualProjector(7168→1024)` | 2048+5120 → 1024 | `pert_model.gene_tokens_projector.*`（10 键） |
-| 序列主干 `transformer_backbone` | `MAP/model/transformer_encoder.py::get_transformer_backbone('llama')` | 1024 维，**10 层**（ckpt `layers.0..9`），`embed_tokens` 32000×1024 且被清零冻结 | `pert_model.transformer_backbone.*`（42 键） |
+| 序列主干 `transformer_backbone` | `MAP/model/transformer_encoder.py::get_transformer_backbone('llama')` | 1024 维、**4 层**（ckpt `layers.0..3`，每层 10 张量 = 42 键）；`head_dim=128`（由 ckpt 的 q/k/v/o=(1024,1024) 与 `rotary_emb.inv_freq=(64,)` 反推，出厂默认 84 不匹配）；`embed_tokens` 32000×1024 且被清零冻结 | `pert_model.transformer_backbone.*`（42 键） |
 | 输出投影 `project_out` | `ProjectOut(1024→2048)` | 1024 → 2048 | `pert_model.project_out.*`（4 键） |
 | 表达解码 `gene_decoder` | `LatentToGeneDecoder(latent 2048, gene 2000, hidden [512,1024])` | 2048 → 2000 | `pert_model.gene_decoder.*`（10 键） |
 
@@ -86,5 +86,6 @@ MAP-KG（14 源, 187k drugs / 23k genes）        控制细胞 bulk → STATE SE
 | `embed_tokens` 被清零 | `get_transformer_backbone` 里 `embed_tokens.weight.zero_()` 且 `requires_grad=False` → 32000 词表与结果无关 |
 | `nlayers` 冲突 | `configs/se600m.yaml` 写 8，代码硬编码 16，ckpt 与代码一致（16）→ 以代码为准 |
 | `hvg_info=None` | 发布 ckpt 训练时未用 HVG 信息 → 3.1/3.2 不需要 HVG 列表 |
-| 键名差异 | ckpt 用 `pert_model.smiles_encoder.*` + `pert_model.drug_projector.*`；现有 `pert.py` 用 `kg_smiles_encoder.smiles_encoder.*` → 需 `pert_ca.py`（见 `plan/03-reimplementation.md`） |
+| 键名差异 | ckpt 用 `pert_model.smiles_encoder.*` + `pert_model.drug_projector.*`；现有 `pert.py` 用 `kg_smiles_encoder.smiles_encoder.*` → 由 `pert_ca.py` 解决（已实现，见 `plan/03-reimplementation.md`） |
+| RoPE 键 | ckpt 每层带 `self_attn.rotary_emb.inv_freq`，新版 transformers 把 RoPE 提到 model 级；`pert_ca.py` 给每层补了同名 buffer（零值、不参与计算），否则 `strict=True` 会报 unexpected 键 |
 | 冻结策略 | ESM-2 / MoleculeSTM 冻结；SE 在 `freeze_se=True` 时冻结 |

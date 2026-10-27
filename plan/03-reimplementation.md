@@ -25,15 +25,22 @@
 
 无（所需权重与词表均已在本地）。
 
-## 待完成实现
+## 实现记录（已完成）
 
 | # | 文件 | 具体改动 |
 |---|---|---|
-| P1 | `MAP/model/pert_ca.py`（新建） | 类 `PerturbationEncoder_ca`：组装顺序同 `pert.py`，但药物分支拆为 `self.smiles_encoder = MolSTM_Extractor(...)`（→176 键）+ `self.drug_projector = ResidualProjector(256→1024)`（→10 键）；`drug_vec = drug_projector(smiles_encoder(smiles))` 且冻结；`smile_encoder` 接受 `{'PrimeKG_ver1','MAP-KG'}`；`forward/encode_cells/encode_genes/encode_drug` 与 `pert.py` 对齐（需通读 `pert.py:75+`） |
-| P2 | `MAP/model/mega_molbart/STMencoder_ddp.py`、`STMencoder.py` | ① 硬编码 `ckpt_path` → 环境变量 `MAP_MOLECULE_CKPT`，并支持指向 `mapkg_encoder_v3.pt`（抽取 `smiles_encoder.` 子字典去前缀）；② `vocab_path` → `MAP_BART_VOCAB`；③ `_load_model()` 支持注入 state_dict |
-| P3 | `MAP/configs/se600m.yaml` | `embeddings.current: esm2-cellxgene`；`all_embeddings` → `.../esm2_gene/Homo_sapiens.GRCh38.gene_symbol_to_embedding_ESM2.pt`；清理其余 26 处 `/large_storage`、`/path/to` 占位；`nlayers` 不动（代码硬编码 16） |
-| P4 | 无 | `demo.py` 的 `smile_encoder="PrimeKG_ver1"` 与 ckpt 的 `args` 一致，**不改** |
+| ✅ P1 | `MAP/model/pert_ca.py`（新建） | 类 `PerturbationEncoder_ca`：组装顺序同 `pert.py`，但药物分支拆为 `self.smiles_encoder = MolSTM_Extractor(...)`（→176 键）+ `self.drug_projector = ResidualProjector(256→1024)`（→10 键）；`drug_vec = drug_projector(smiles_encoder(smiles))` 且冻结；`smile_encoder` 接受 `{'PrimeKG_ver1','MAP-KG'}`；`forward/encode_cells/encode_genes/encode_drug` 与 `pert.py` 对齐（需通读 `pert.py:75+`） |
+| ✅ P2 | `MAP/model/mega_molbart/STMencoder_ddp.py`（仅此一份被引用；`STMencoder.py` 无 import，未改） | ① 硬编码 `ckpt_path` → 环境变量 `MAP_MOLECULE_CKPT`，并支持指向 `mapkg_encoder_v3.pt`（抽取 `smiles_encoder.` 子字典去前缀）；② `vocab_path` → `MAP_BART_VOCAB`；③ `_load_model()` 支持注入 state_dict |
+| ✅ P3 | `MAP/configs/se600m.yaml` | `embeddings.current: esm2-cellxgene`；`all_embeddings` → `.../esm2_gene/Homo_sapiens.GRCh38.gene_symbol_to_embedding_ESM2.pt`；清理其余 26 处 `/large_storage`、`/path/to` 占位；`nlayers` 不动（代码硬编码 16） |
+| — P4 | 无 | `demo.py` 的 `smile_encoder="PrimeKG_ver1"` 与 ckpt 的 `args` 一致，**不改** |
 
-**明确不改**：`MAP/demo.py`、`MAP/model/pert.py`、`MAP/model/model.py`（保持上游原样，便于对照）。
+**明确不改**：`MAP/demo.py`、`MAP/model/pert.py`。
+
+**实际需要改的第三处**：`MAP/model/model.py` 第 56 行把 `PerturbationEncoder(` 换成 `PerturbationEncoder_ca(`（1 行），否则实例化的仍是 `pert.py` 里键名不匹配的类。
+
+**实测补充（写补丁时发现，之前未记录）**：
+- `transformer_backbone` 实际是 **4 层**（ckpt `layers.0..3`），与 `ST_small_transformer_backbone_kwargs` 一致；
+- `head_dim` 必须设 **128**（ckpt q/k/v/o=(1024,1024)、`rotary_emb.inv_freq=(64,)`），出厂配置的 84 会导致形状不匹配；
+- `STMencoder_ddp.py` 的 `torch.load` 需显式 `weights_only=False`（torch 2.8 默认 True，该 ckpt 含 numpy 标量）。
 
 **验收方式**：补丁后用 `epoch_3.pt` 试 `load_state_dict(strict=True)`，要求 499 键全命中（不跑前向）。

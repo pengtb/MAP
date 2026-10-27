@@ -53,7 +53,7 @@ class MAPmodel(nn.Module):
                 param.requires_grad = False
             self.se.eval()
 
-        self.pert_model = PerturbationEncoder(
+        self.pert_model = PerturbationEncoder_ca(
             dim_emb=1024,
             encode_conc=False,
             num_heads=8,

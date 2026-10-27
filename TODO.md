@@ -65,9 +65,9 @@
 
 | # | 位置 | 做什么 | 依赖 |
 |---|---|---|---|
-| P1 | `MAP/model/pert_ca.py`（新建） | 写 `PerturbationEncoder_ca`：组装顺序同 `pert.py`，但把药物分支拆成 `self.smiles_encoder = MolSTM_Extractor(...)`（→ 176 键）+ `self.drug_projector = ResidualProjector(256→1024)`（→ 10 键）；`smile_encoder` 接受 `{'PrimeKG_ver1','MAP-KG'}`；`forward/encode_*` 与 `pert.py` 对齐 | 无（需先通读 `pert.py:75+`） |
-| P2 | `MAP/model/mega_molbart/STMencoder_ddp.py`（及 `STMencoder.py`） | ①`ckpt_path` → 环境变量 `MAP_MOLECULE_CKPT`，允许指向 `mapkg_encoder_v3.pt`（抽取 `smiles_encoder.` 子字典去前缀）；②`vocab_path` → `MAP_BART_VOCAB`；③`_load_model()` 支持注入 state_dict | 无 |
-| P3 | `MAP/configs/se600m.yaml` | `embeddings.current: esm2-cellxgene`；`all_embeddings` → `/data-tangc/models/map_repr/Homo_sapiens.GRCh38.gene_symbol_to_embedding_ESM2.pt`；清理其余 26 处外部路径；不动 `nlayers` | 无 |
+| ✅ P1 | `MAP/model/pert_ca.py`（新建） | 写 `PerturbationEncoder_ca`：组装顺序同 `pert.py`，但把药物分支拆成 `self.smiles_encoder = MolSTM_Extractor(...)`（→ 176 键）+ `self.drug_projector = ResidualProjector(256→1024)`（→ 10 键）；`smile_encoder` 接受 `{'PrimeKG_ver1','MAP-KG'}`；`forward/encode_*` 与 `pert.py` 对齐 | 无（需先通读 `pert.py:75+`） |
+| ✅ P2 | `MAP/model/mega_molbart/STMencoder_ddp.py`（`STMencoder.py` 未被引用，不改） | ①`ckpt_path` → 环境变量 `MAP_MOLECULE_CKPT`，允许指向 `mapkg_encoder_v3.pt`（抽取 `smiles_encoder.` 子字典去前缀）；②`vocab_path` → `MAP_BART_VOCAB`；③`_load_model()` 支持注入 state_dict | 无 |
+| ✅ P3 | `MAP/configs/se600m.yaml` | `embeddings.current: esm2-cellxgene`；`all_embeddings` → `/data-tangc/models/map_repr/Homo_sapiens.GRCh38.gene_symbol_to_embedding_ESM2.pt`；清理其余 26 处外部路径；不动 `nlayers` | 无 |
 | ~~P4~~ | ~~`MAP/demo.py`~~ | **已撤销**：ckpt 的 `args.smile_encoder="PrimeKG_ver1"` 与 demo 一致，**不要改** | — |
 | P5 | `preprocess/Cs_split_unseen_combination.py` 输出 | 产出 `control_indices_UC.json`，demo 读 `control_indices.json` → 需改名/复制（仅走预处理时需要） | 1.3 |
 | P6 | `MAP-KG/train_resume.py:27-29` | CSV 路径指向 `data/selected_data_csvs/` | 阶段二 |
@@ -104,7 +104,7 @@
 | **P0** | 通读 `pert.py:75+`（forward / encode_cells / encode_genes / encode_drug），写出 P1 的 `pert_ca.py` | 无 |
 | **P0** | 打 P2、P3 | 无 |
 | ~~P1~~ | ~~下 `se600m.safetensors`~~ | ✅ 已完成（sha256 校验通过） |
-| **P1** | **加载验证**：用 `epoch_3.pt` 试 `load_state_dict`，确认 499 键全命中（不跑前向） | P0 补丁 |
+| ~~P1~~ | ~~加载验证~~ | ✅ 已完成：`strict=True` → `<All keys matched successfully>`，499/499 |
 | **P2** | 跑 `demo.py`（1.1） | 只需 `se600m.safetensors`（M3） |
 | **P3** | 1.2 可复现性（固定 seed、换条件、与 minimal_dataset 对照） | 1.1 |
 | **P4** | 阶段二：MAP-KG 3 个 CSV → `train_resume.sh` | 无阻塞，可并行 |
