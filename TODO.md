@@ -22,6 +22,7 @@
 - ✅ `.venv`（Python 3.11.14，uv 创建）+ `torch 2.8.0+cu128`
 - ✅ GPU 验证：`cap=(10,0)`、`archs` 含 `sm_100`、8192² bf16 matmul 成功
 - ✅ 依赖：numpy/pandas/scipy/sklearn/rdkit/omegaconf/safetensors/transformers/scanpy/anndata/lightning/requests
+- ✅ `transformers` 定版 **4.43.4**（5.x 下双向注意力 override 失效；4.43 的 SDPA 用 `causal_mask is None` 决定 `is_causal`）
 - ✅ 可导入：`model.se` / `model.pert` / `model.smiles_kg_encoder_v3` / `model.mega_molbart.STMencoder_ddp` / `data.utils`
 - ❌ `model.model` 导入失败（缺 `model/pert_ca.py`，待 §3 P1）
 
@@ -95,6 +96,9 @@
 | R12 | ckpt 与 `pert.py` 键名结构不一致（`smiles_encoder`+`drug_projector` vs `kg_smiles_encoder.*`） | `strict=True` 加载会失败 | 由 P1 解决 |
 | R13 | ~~`molecule_model.pth` 缺失~~ | — | **已解除**：`mapkg_encoder_v3.pt` 权重一致，由 P2 接入 |
 | R14 | `bart_vocab.txt` 绑定两处词表维度 | 拿不到就完全无法启动 | 只能索取；不可用替代词表 |
+| **R15** | **药物信号偏弱（未决）** | 同 cells/seed 下，吡哆醇 vs 布洛芬 vs 咖啡因的输出最大差仅 **2.98e-4 / 3.44e-4**；而 gene tokens 置零影响约 2%（均值 0.1528→0.1495）。可能是 log1p 空间的正常量级，也可能是 drug token 与 gene token 量级失衡（drug vec 范数 ~50） | 待查：先测 gene token 实际范数并与 drug 对比；必要时确认原训练是否对 drug token 做归一化。判据可参考图源 `Fig_3c` |
+| **R16** | 剂量对输出无影响 | 0.1/0.5/5.0 μM 输出 md5 相同。非 bug：`encode_conc=False`，`concs` 从未进入 forward，ckpt `args` 相同 | 记录即可；剂量条件化属扩展而非复现 |
+| **R17** | 双向注意力依赖 `_update_causal_mask` | 上游实现随 transformers 版本变化（5.x 直接删除），换环境会**静默**退化为因果注意力、指标失真且不报错 | 已用「全零加性 mask」加固；升级 transformers 后必须重跑 `plan/05` 的 sanity（zero-drug 与 real 应不同） |
 
 ---
 
@@ -102,12 +106,14 @@
 
 | 优先级 | 事项 | 依赖 |
 |---|---|---|
-| **P0** | 通读 `pert.py:75+`（forward / encode_cells / encode_genes / encode_drug），写出 P1 的 `pert_ca.py` | 无 |
+| ~~P0~~ | ~~通读 `pert.py:75+` 并写 `pert_ca.py`~~ | ✅ 已完成 |
 | **P0** | 打 P2、P3 | 无 |
 | ~~P1~~ | ~~下 `se600m.safetensors`~~ | ✅ 已完成（sha256 校验通过） |
 | ~~P1~~ | ~~加载验证~~ | ✅ 已完成：`strict=True` → `<All keys matched successfully>`，499/499 |
 | ~~P2~~ | ~~跑 `demo.py`（1.1）~~ | ✅ 已完成（rc=0，20.05 s / 12.7 GiB，输出无 NaN） |
 | **P3** | 1.2 可复现性（固定 seed、换条件、与 minimal_dataset 对照） | 1.1 |
+| **P0** | **R15 量级排查**：测 gene token 与 drug token 的实际范数，判断 drug 是否被稀释或量级失衡（约 30 min） | 无 |
+| **P1** | 阶段二：下 MAP-KG 3 个 CSV + BioBERT + ESM-2 650M → `MAP-KG/train_resume.sh` | 无阻塞 |
 | **P4** | 阶段二：MAP-KG 3 个 CSV → `train_resume.sh` | 无阻塞，可并行 |
 | **P5** | 1.3（Tahoe 路径） | HVG 列表 + 300 GB 数据 |
 
@@ -135,3 +141,57 @@ UV_PYTHON_INSTALL_MIRROR=https://mirror.nju.edu.cn/github-release/astral-sh/pyth
 | 2026-10-27 | `se600m.safetensors` 经 hf-mirror 下载完成并校验（2,860,276,816 B（2.66 GiB），sha256 与 HF etag 一致）；M3/P1 关闭 |
 | 2026-10-27 | demo 跑通：新增 `pert_ca.py`、修 `model.py` 两处（类选择 + 标志位）、`STMencoder_ddp.py` 路径与子字典、config 1 行；`strict=True` 499/499；demo 20.05 s / 12.7 GiB |
 | 2026-10-27 | 3.2 完成：`demo.py` 加 `--seed`；**修复双向注意力失效**（transformers 4.4x 强制 causal）；`transformers` 定版 4.43.4；修复 `hvg_info` 标志位；9 个 run 结果见 `plan/05`。新发现：剂量无效（`encode_conc=False`，代码事实）、药物信号仅 ~3e-4（待查） |
+
+---
+
+## 8. 交接（后续 agent / 协作者看这里）
+
+### 8.1 环境与关键变量
+
+```bash
+source /data-tangc/dev/ptb/map-repro/.venv/bin/activate     # Python 3.11.14 + torch 2.8.0+cu128 + transformers 4.43.4
+export MAP_MOLECULE_CKPT=/data-tangc/models/map_repr/mapkg_encoder/mapkg_encoder_v3.pt
+export MAP_BART_VOCAB=/data-tangc/models/map_repr/molecule_stm/bart_vocab.txt
+export CUDA_VISIBLE_DEVICES=0        # GPU 4-7 常被他人占用（各 167 GB）
+```
+
+### 8.2 一键复现 demo
+
+```bash
+cd /data-tangc/dev/ptb/map-repro/MAP
+python demo.py --ckpt /data-tangc/models/map_repr/predictor/epoch_3.pt \
+  --cell_line CVCL_0023 --drug_smiles "Cc1ncc(CO)c(CO)c1O" --drug_conc 0.5 --set_size 24 --seed 0 \
+  --se_ckpt /data-tangc/models/map_repr/state_se600m/se600m.safetensors \
+  --se_config configs/se600m.yaml \
+  --data_base_dir ../work/minimal_dataset/preprocessed \
+  --se_inputs_base_dir ../work/minimal_dataset/preprocessed_se_inputs_memmap \
+  --output_dir ../work/demo_output
+```
+
+### 8.3 本仓库改过的文件（相对上游）
+
+| 文件 | 改动摘要 |
+|---|---|
+| `MAP/model/pert_ca.py` | 新增：键名对齐 ckpt 的编码器 + 全零加性 mask（双向注意力）+ 持久 rotary buffer + `MAP_DEBUG_DRUG` 调试钩子 |
+| `MAP/model/model.py` | 实例化 `PerturbationEncoder_ca`；初始化 `pert_model_hvg_ids_already_set` / `hvg_ids` |
+| `MAP/model/mega_molbart/STMencoder_ddp.py` | `MAP_MOLECULE_CKPT` / `MAP_BART_VOCAB` 环境变量；从 `mapkg_encoder_v3.pt` 抽取 `smiles_encoder._model.*`；`weights_only=False` |
+| `MAP/configs/se600m.yaml` | `all_embeddings` 指向本地 ESM2 嵌入表 |
+| `MAP/demo.py` | `--seed`；保存 `input_ctrl_row_indices.npy`；meta 记录 seed |
+
+### 8.4 已知坑（踩过的）
+
+1. `transformers` 必须 **4.43.4**；5.x 会让双向注意力静默失效（输出与药物无关）。
+2. `torch.load` 需显式 `weights_only=False`（ckpt 含 numpy 标量）。
+3. `inv_freq` 在 4.43 是非持久 buffer，需在 `pert_ca.py` 重新注册，否则 `strict=True` 报 4 个 unexpected 键。
+4. demo 的 `se_gene_ids.npy` / `se_expr.npy` 是**裸 memmap（无 npy 头）**，必须按 `shape/dtype` 读，不能用 `np.load`。
+5. 不传 `--seed` 时 `np.random.choice` 每次抽到的 control cells 不同。
+6. 进程内连续多次 forward 有 ~3e-3 的 kernel warm-up 抖动；比较不同条件务必**每次单独起进程**。
+
+### 8.5 产物位置
+
+| 路径 | 内容 |
+|---|---|
+| `work/minimal_dataset/` | 解压后的 demo 输入 |
+| `work/demo_output/` | 单次 demo 输出（4 个 npy + meta.json） |
+| `work/exp32d/` | 3.2 的 9 个 run（无 seed ×3、seed0 ×2、剂量 ×2、药物 ×2） |
+| `/data-tangc/models/map_repr/` | 全部权重，按 encoder / 基础模型分子目录 |
