@@ -86,6 +86,7 @@ MAP-KG（14 源, 187k drugs / 23k genes）        控制细胞 bulk → STATE SE
 | `embed_tokens` 被清零 | `get_transformer_backbone` 里 `embed_tokens.weight.zero_()` 且 `requires_grad=False` → 32000 词表与结果无关 |
 | `nlayers` 冲突 | `configs/se600m.yaml` 写 8，代码硬编码 16，ckpt 与代码一致（16）→ 以代码为准 |
 | `hvg_info=None` | 发布 ckpt 训练时未用 HVG 信息 → 3.1/3.2 不需要 HVG 列表 |
+| 标志位未初始化 | `model.py::forward` 读 `pert_model_hvg_ids_already_set`，上游 `__init__` 未定义（`hvg_info=None` 也会触发）→ 已补 `False` / `hvg_ids=None` |
 | 键名差异 | ckpt 用 `pert_model.smiles_encoder.*` + `pert_model.drug_projector.*`；现有 `pert.py` 用 `kg_smiles_encoder.smiles_encoder.*` → 由 `pert_ca.py` 解决（已实现，见 `plan/03-reimplementation.md`） |
 | RoPE 键 | ckpt 每层带 `self_attn.rotary_emb.inv_freq`，新版 transformers 把 RoPE 提到 model 级；`pert_ca.py` 给每层补了同名 buffer（零值、不参与计算），否则 `strict=True` 会报 unexpected 键 |
 | 冻结策略 | ESM-2 / MoleculeSTM 冻结；SE 在 `freeze_se=True` 时冻结 |

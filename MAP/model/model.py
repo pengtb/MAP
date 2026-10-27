@@ -23,6 +23,9 @@ class MAPmodel(nn.Module):
         self.freeze_se = freeze_se
         self.smile_encoder = smile_encoder
         self.hvg_info = hvg_info
+        # NOTE: forward() reads these two attributes; upstream never initialises them.
+        self.pert_model_hvg_ids_already_set = False
+        self.hvg_ids = None
 
         self.se = StateEmbeddingModel(
             token_dim=5120,

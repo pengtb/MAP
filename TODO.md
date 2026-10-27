@@ -68,6 +68,7 @@
 | ✅ P1 | `MAP/model/pert_ca.py`（新建） | 写 `PerturbationEncoder_ca`：组装顺序同 `pert.py`，但把药物分支拆成 `self.smiles_encoder = MolSTM_Extractor(...)`（→ 176 键）+ `self.drug_projector = ResidualProjector(256→1024)`（→ 10 键）；`smile_encoder` 接受 `{'PrimeKG_ver1','MAP-KG'}`；`forward/encode_*` 与 `pert.py` 对齐 | 无（需先通读 `pert.py:75+`） |
 | ✅ P2 | `MAP/model/mega_molbart/STMencoder_ddp.py`（`STMencoder.py` 未被引用，不改） | ①`ckpt_path` → 环境变量 `MAP_MOLECULE_CKPT`，允许指向 `mapkg_encoder_v3.pt`（抽取 `smiles_encoder.` 子字典去前缀）；②`vocab_path` → `MAP_BART_VOCAB`；③`_load_model()` 支持注入 state_dict | 无 |
 | ✅ P3 | `MAP/configs/se600m.yaml` | `embeddings.current: esm2-cellxgene`；`all_embeddings` → `/data-tangc/models/map_repr/Homo_sapiens.GRCh38.gene_symbol_to_embedding_ESM2.pt`；清理其余 26 处外部路径；不动 `nlayers` | 无 |
+| ✅ P5 | `MAP/model/model.py`（追加） | `forward()` 读 `self.pert_model_hvg_ids_already_set`，但 `__init__` 未定义 → 补 `False` 与 `hvg_ids=None` | 无 |
 | ~~P4~~ | ~~`MAP/demo.py`~~ | **已撤销**：ckpt 的 `args.smile_encoder="PrimeKG_ver1"` 与 demo 一致，**不要改** | — |
 | P5 | `preprocess/Cs_split_unseen_combination.py` 输出 | 产出 `control_indices_UC.json`，demo 读 `control_indices.json` → 需改名/复制（仅走预处理时需要） | 1.3 |
 | P6 | `MAP-KG/train_resume.py:27-29` | CSV 路径指向 `data/selected_data_csvs/` | 阶段二 |
@@ -105,7 +106,7 @@
 | **P0** | 打 P2、P3 | 无 |
 | ~~P1~~ | ~~下 `se600m.safetensors`~~ | ✅ 已完成（sha256 校验通过） |
 | ~~P1~~ | ~~加载验证~~ | ✅ 已完成：`strict=True` → `<All keys matched successfully>`，499/499 |
-| **P2** | 跑 `demo.py`（1.1） | 只需 `se600m.safetensors`（M3） |
+| ~~P2~~ | ~~跑 `demo.py`（1.1）~~ | ✅ 已完成（rc=0，20.05 s / 12.7 GiB，输出无 NaN） |
 | **P3** | 1.2 可复现性（固定 seed、换条件、与 minimal_dataset 对照） | 1.1 |
 | **P4** | 阶段二：MAP-KG 3 个 CSV → `train_resume.sh` | 无阻塞，可并行 |
 | **P5** | 1.3（Tahoe 路径） | HVG 列表 + 300 GB 数据 |
@@ -132,3 +133,4 @@ UV_PYTHON_INSTALL_MIRROR=https://mirror.nju.edu.cn/github-release/astral-sh/pyth
 | 2026-10-27 | 读正文/SI/图源 xlsx：新增复用边界（PLAN §1.4）与图源数据（§1.5）；**M1 解除**（MoleculeSTM 词表 523 token 验证通过） |
 | 2026-10-27 | 目录重组：权重按 encoder/基础模型分子目录（`predictor/`、`mapkg_encoder/`、`molecule_stm/`、`state_se600m/`、`esm2_gene/`）；`PLAN.md` 拆分为 `plan/01~07 + README`；新增 `design/architecture.md` |
 | 2026-10-27 | `se600m.safetensors` 经 hf-mirror 下载完成并校验（2,860,276,816 B（2.66 GiB），sha256 与 HF etag 一致）；M3/P1 关闭 |
+| 2026-10-27 | demo 跑通：新增 `pert_ca.py`、修 `model.py` 两处（类选择 + 标志位）、`STMencoder_ddp.py` 路径与子字典、config 1 行；`strict=True` 499/499；demo 20.05 s / 12.7 GiB |
