@@ -23,7 +23,7 @@
 - ✅ 给 `demo.py` 增加 `--seed`（同时设 `random` / `np.random` / `torch` / `torch.cuda`），并在输出目录额外保存 `input_ctrl_row_indices.npy`、meta 中记录 `seed` 与 `control_row_indices`
 - ✅ **修复上游双向注意力失效**：`transformers 4.4x` 的 `LlamaSdpaAttention` 里写死了
   `is_causal = True if causal_mask is None and q_len > 1 else False`，
-  仓库用"`_update_causal_mask` 返回 None"实现双向注意力的做法**完全失效**（等于因果注意力，位置 0 只看得到自己）。已在 `pert_ca.py` 中改为返回**全零加性 mask**
+  仓库用"`_update_causal_mask` 返回 None"实现双向注意力的做法**完全失效**（等于因果注意力，位置 0 只看得到自己）。已在 `pert_ca.py` 中改为返回**全零加性 mask**。（训练环境 4.30.1 下该 override 同样不生效；训练时的实际语义待 `plan/08` 判定）
 - ✅ 环境定版：`transformers==4.43.4`（5.20 下 `_update_causal_mask` 已不存在；4.43 下 rotary 每层存在但 `inv_freq` 是非持久 buffer，已在 `pert_ca.py` 里重新注册为持久 buffer 以匹配 ckpt）
 - ✅ 修掉 `model.py::forward` 读未初始化属性 `pert_model_hvg_ids_already_set` 的问题
 - ✅ 跑完 9 个 run 的实验矩阵（`work/exp32d/`）
@@ -41,7 +41,7 @@
 
 1. **可复现性已解决**：`--seed` 固定后逐位一致；不设 seed 时差异来自 control-cell 抽样，量级 ~0.3（占值域 0–2.33 的 ~13%）。
 2. **剂量无效是代码事实**：`PerturbationEncoder` 的 `encode_conc=False`，`concs` 从未进入 forward；ckpt 的 `args` 也印证同一设置。所以 demo 的 `--drug_conc` 只是被记录、不影响结果。
-3. **药物信号偏弱（待查）**：把 drug 向量置零与真实值相比，输出差异仅 ~3e-4；把 gene tokens 置零则为 ~2%（均值 0.1528→0.1495）。药物 token 在 2049 长序列中被稀释，需在 3.3（指标级）或与论文图源数值对比时判断这是否符合发布权重应有的行为。
+3. **药物信号偏弱的根因已判定（R15 / H1）**：发布 ckpt 训练时使用因果注意力，位置 0 的损失不能给 drug/gene token 路径及 q/k、`gene_tokens_projector` 有效梯度。R15 中 T 12/12 的 `exp_avg_sq` 全为 0、C 29/29 非零，统计判据同向；因果条件下三种药输出完全相同。因此当前双向 patch 下 ~3e-4 的换药差异来自未获有效训练的路径，**不应作为发布模型的药物响应证据**。完整证据见 `plan/08` 与 `results/r15/`。
 
 ## 待获取资源
 
@@ -52,5 +52,4 @@
 
 ## 待完成实现
 
-- ⬜ 追查药物信号偏弱：对照 `Fig_3c` 图源数值（同一药物在 A-549 的 Pearson）判断量级是否合理；必要时检查 drug token 是否应与 gene token 做同样的归一化
 - ⬜ 若拿到 HVG 列表与真实表达谱，补做 top-50 DEG 方向一致性与 Pearson delta

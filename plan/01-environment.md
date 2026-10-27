@@ -28,7 +28,8 @@
 
 ## 待完成实现
 
-- ⬜ `model.model` 仍无法导入 → 依赖 `03-reimplementation.md` 的 `pert_ca.py`
+- ✅ `model.model` 可导入（`pert_ca.py` 已实现，见 `03-reimplementation.md`）
 - ✅ `transformers` 已定版 4.43.4：5.x 删除了 `LlamaModel._update_causal_mask`（仓库的双向注意力 override 变成死代码）；4.4x 的 SDPA 由 `causal_mask is None` 决定 `is_causal`（详见 plan/05）
+- ⚠️ `requirements.txt` 定的训练环境是 `transformers==4.30.1`，与 4.43.4 的注意力 mask / RoPE 行为不同；训练时的实际语义见 `plan/08`
 - ⚠️ `numpy 2.4.6` 仍新于代码时代，遇 `np.float_` 等按需替换
 - ⬜ `flash_attn` / `apex` / `deepspeed` 未安装（训练路径可能需要，推理路径不需要）

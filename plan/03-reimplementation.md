@@ -34,7 +34,7 @@
 | ✅ P3 | `MAP/configs/se600m.yaml` | `embeddings.current: esm2-cellxgene`；`all_embeddings` → `.../esm2_gene/Homo_sapiens.GRCh38.gene_symbol_to_embedding_ESM2.pt`；清理其余 26 处 `/large_storage`、`/path/to` 占位；`nlayers` 不动（代码硬编码 16） |
 | — P4 | 无 | `demo.py` 的 `smile_encoder="PrimeKG_ver1"` 与 ckpt 的 `args` 一致，**不改** |
 
-**明确不改**：`MAP/demo.py`、`MAP/model/pert.py`。
+**明确不改**：`MAP/model/pert.py`。（`MAP/demo.py` 在 3.2 增加了 `--seed`，见 `plan/05`。）
 
 **实际需要改的第三处**：`MAP/model/model.py` 第 56 行把 `PerturbationEncoder(` 换成 `PerturbationEncoder_ca(`（1 行），否则实例化的仍是 `pert.py` 里键名不匹配的类。
 

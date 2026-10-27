@@ -1,0 +1,234 @@
+{
+  "between_condition": {
+    "drug_caf": {
+      "emb": {
+        "maxabs": 0.049720918759703636,
+        "pearson": 0.5908760185196132
+      },
+      "hvg": {
+        "maxabs": 1.5429561138153076,
+        "pearson": 0.8843676847808495
+      }
+    },
+    "drug_ibu": {
+      "emb": {
+        "maxabs": 0.04964218847453594,
+        "pearson": 0.5909692669856336
+      },
+      "hvg": {
+        "maxabs": 1.5429861545562744,
+        "pearson": 0.884368833658321
+      }
+    },
+    "seed0_a": {
+      "emb": {
+        "maxabs": 0.049646755680441856,
+        "pearson": 0.5909199779305656
+      },
+      "hvg": {
+        "maxabs": 1.5429683923721313,
+        "pearson": 0.8843651969501164
+      }
+    }
+  },
+  "drugs": [
+    {
+      "name": "pyridoxine",
+      "tag": "seed0_a"
+    },
+    {
+      "name": "ibuprofen",
+      "tag": "drug_ibu"
+    },
+    {
+      "name": "caffeine",
+      "tag": "drug_caf"
+    }
+  ],
+  "mask_checks": {
+    "a_drug_caf": {
+      "attn_is_causal_flag": false,
+      "mask_check_pass": true,
+      "mask_kind": "zero_additive_bidirectional",
+      "mask_shape": [
+        24,
+        1,
+        2049,
+        2049
+      ],
+      "visible_row0": 2049,
+      "visible_row1": 2049
+    },
+    "a_drug_ibu": {
+      "attn_is_causal_flag": false,
+      "mask_check_pass": true,
+      "mask_kind": "zero_additive_bidirectional",
+      "mask_shape": [
+        24,
+        1,
+        2049,
+        2049
+      ],
+      "visible_row0": 2049,
+      "visible_row1": 2049
+    },
+    "a_seed0_a": {
+      "attn_is_causal_flag": false,
+      "mask_check_pass": true,
+      "mask_kind": "zero_additive_bidirectional",
+      "mask_shape": [
+        24,
+        1,
+        2049,
+        2049
+      ],
+      "visible_row0": 2049,
+      "visible_row1": 2049
+    },
+    "b_drug_caf": {
+      "attn_is_causal_flag": true,
+      "mask_check_pass": true,
+      "mask_kind": "additive_with_blocked_entries",
+      "mask_shape": [
+        1,
+        1,
+        2049,
+        2049
+      ],
+      "visible_row0": 1,
+      "visible_row1": 2
+    },
+    "b_drug_ibu": {
+      "attn_is_causal_flag": true,
+      "mask_check_pass": true,
+      "mask_kind": "additive_with_blocked_entries",
+      "mask_shape": [
+        1,
+        1,
+        2049,
+        2049
+      ],
+      "visible_row0": 1,
+      "visible_row1": 2
+    },
+    "b_seed0_a": {
+      "attn_is_causal_flag": true,
+      "mask_check_pass": true,
+      "mask_kind": "additive_with_blocked_entries",
+      "mask_shape": [
+        1,
+        1,
+        2049,
+        2049
+      ],
+      "visible_row0": 1,
+      "visible_row1": 2
+    }
+  },
+  "md5": {
+    "condition_a_vs_exp32d": {
+      "a_drug_caf": {
+        "exp32d_md5": "91dca0696d0f70a122dfe39340eef19d",
+        "match": true,
+        "run_md5": "91dca0696d0f70a122dfe39340eef19d"
+      },
+      "a_drug_ibu": {
+        "exp32d_md5": "5a8611e6829a52142506b220f84a7091",
+        "match": true,
+        "run_md5": "5a8611e6829a52142506b220f84a7091"
+      },
+      "a_seed0_a": {
+        "exp32d_md5": "4efcdf75cea1b47b17363cd12e2e3be4",
+        "match": true,
+        "run_md5": "4efcdf75cea1b47b17363cd12e2e3be4"
+      }
+    },
+    "condition_b_vs_exp32d": {
+      "b_drug_caf": {
+        "exp32d_md5": "91dca0696d0f70a122dfe39340eef19d",
+        "match": false,
+        "run_md5": "a8999ddfd248986987ac28de4d4a59de"
+      },
+      "b_drug_ibu": {
+        "exp32d_md5": "5a8611e6829a52142506b220f84a7091",
+        "match": false,
+        "run_md5": "a8999ddfd248986987ac28de4d4a59de"
+      },
+      "b_seed0_a": {
+        "exp32d_md5": "4efcdf75cea1b47b17363cd12e2e3be4",
+        "match": false,
+        "run_md5": "a8999ddfd248986987ac28de4d4a59de"
+      }
+    }
+  },
+  "meta": {
+    "cell_line": "CVCL_0023",
+    "drug_conc_uM": 0.5,
+    "dtype_compared": "float64",
+    "note": "condition a = shipped bidirectional; condition b = runtime causal monkeypatch",
+    "seed": 0,
+    "set_size": 24
+  },
+  "recorded_forward_rc": {
+    "failed_attempts": {
+      "a_seed0_a_attempt1": {
+        "job_id": "283765d98dcf4f69b3614188d8bd4123",
+        "rc": 1,
+        "reason": "the runner wrapped MAPmodel.__init__ with *args/**kwargs, which broke the Lightning save_hyperparameters frame parser (KeyError: a). Rewritten to patch at forward time; attempt 1 produced no artifacts."
+      }
+    },
+    "forwards": {
+      "a_drug_caf": {
+        "job_id": "5144141795eb4e17ad30c158bbdaf67f",
+        "rc": 0
+      },
+      "a_drug_ibu": {
+        "job_id": "f6c7f5b54d8a46ed82d2d6eacaec1654",
+        "rc": 0
+      },
+      "a_seed0_a": {
+        "job_id": "0115bf3a492b48fa8c5d143cac0873c8",
+        "rc": 0
+      },
+      "b_drug_caf": {
+        "job_id": "a026a56cc7a441879890a15954462326",
+        "rc": 0
+      },
+      "b_drug_ibu": {
+        "job_id": "85db1d2ae48c4cadb433744a73a5f341",
+        "rc": 0
+      },
+      "b_seed0_a": {
+        "job_id": "f8c02bd102c1406b96d2a8c4e8c00146",
+        "rc": 0
+      }
+    },
+    "source": "bash scripts/job-status.sh <job id> for each separate forward process"
+  },
+  "within_condition": {
+    "a": {
+      "emb": {
+        "drug_ibu|drug_caf": 9.595230221748352e-05,
+        "seed0_a|drug_caf": 0.0001268535852432251,
+        "seed0_a|drug_ibu": 3.810599446296692e-05
+      },
+      "hvg": {
+        "drug_ibu|drug_caf": 0.0003439188003540039,
+        "seed0_a|drug_caf": 0.0003440380096435547,
+        "seed0_a|drug_ibu": 0.0002981424331665039
+      }
+    },
+    "b": {
+      "emb": {
+        "drug_ibu|drug_caf": 0.0,
+        "seed0_a|drug_caf": 0.0,
+        "seed0_a|drug_ibu": 0.0
+      },
+      "hvg": {
+        "drug_ibu|drug_caf": 0.0,
+        "seed0_a|drug_caf": 0.0,
+        "seed0_a|drug_ibu": 0.0
+      }
+    }
+  }
+}

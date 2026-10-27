@@ -1,0 +1,140 @@
+[S1] ckpt: /data-tangc/models/map_repr/predictor/epoch_3.pt
+top-level keys (6): ['epoch', 'global_step', 'model_state_dict', 'optimizer_state_dict', 'scheduler_state_dict', 'args']
+  epoch                      int
+  global_step                int
+  model_state_dict           OrderedDict len=499
+  optimizer_state_dict       dict len=2
+  scheduler_state_dict       dict len=7
+  args                       dict len=22
+
+constructed module: named_parameters=255 named_buffers=5
+buffers: ['smiles_encoder._model.pos_emb', 'transformer_backbone.layers.0.self_attn.rotary_emb.inv_freq', 'transformer_backbone.layers.1.self_attn.rotary_emb.inv_freq', 'transformer_backbone.layers.2.self_attn.rotary_emb.inv_freq', 'transformer_backbone.layers.3.self_attn.rotary_emb.inv_freq']
+ckpt pert_model keys=260; buffers removed=5 -> ['smiles_encoder._model.pos_emb', 'transformer_backbone.layers.0.self_attn.rotary_emb.inv_freq', 'transformer_backbone.layers.1.self_attn.rotary_emb.inv_freq', 'transformer_backbone.layers.2.self_attn.rotary_emb.inv_freq', 'transformer_backbone.layers.3.self_attn.rotary_emb.inv_freq']
+ckpt parameter keys (saved order, buffers removed)=255
+ckpt param key SET == module named_parameters SET: True
+ckpt saved order == named_parameters order: False
+ORDER SOURCE (plan/08): model_state_dict key order with buffers removed.
+  first order divergence at index 209: ckpt=transformer_backbone.layers.0.mlp.down_proj.weight module=transformer_backbone.layers.0.mlp.up_proj.weight
+
+optimizer param_groups=1, state entries=69
+  group 0: params=69 lr=9.998783363402833e-06 betas=(0.9, 0.999) eps=1e-08 weight_decay=0
+candidate A all ckpt params (saved order): 255
+candidate B requires_grad ckpt params (saved order): 69
+optimizer index count: 69
+candidate A (all params): False -- count 255 != optimizer 69
+candidate B (requires_grad only): True -- all 69 shapes match in order
+frozen-by-name group drug_projector: 10 parameters
+frozen-by-name group embed_tokens: 1 parameters
+frozen-by-name group smiles_encoder: 175 parameters
+candidate C (all params minus the three module-name groups): True -- all 69 shapes match in order
+candidate C length=69, excluded total=186
+only candidate B matches -> the optimizer covered requires_grad parameters only
+RESULT: index -> parameter mapping over 69 entries (uniqueness of the T and C names is analysed in the F1 section below)
+parameters outside the optimizer mapping: 186
+outside-set == the three named frozen groups: True
+chosen mapping == candidate C (name-defined): True
+wrote /data-tangc/dev/ptb/map-repro/results/r15/optimizer_state.csv
+
+===== F1 uniqueness analysis over the full model_state_dict (repair round 1) =====
+optimizer slots=69 ; weight_decay per group=[0]
+order-preserving shape fits: full_state_dict_raw_keys                             n_keys=499  fits=4738802796
+order-preserving shape fits: full_state_dict_minus_pert_buffers                   n_keys=494  fits=4738802796
+order-preserving shape fits: pert_model_only_minus_buffers                        n_keys=255  fits=12
+order-preserving shape fits: pert_model_minus_smiles_encoder_minus_drug_projector n_keys=70   fits=1
+se.* frozen evidence vs se600m.safetensors: se_keys=239 identical=238 differing=0 no_reference=['_bin_indices_cached']
+ckpt global_step=155847 ; weight_decay=[0] and a zero gradient leave a parameter untouched,
+so bit-identity with the se600m initial file proves the se.* block was frozen.
+
+justified scope: se.* excluded on that bit-identity -> pert_model_only_minus_buffers
+  fits=12 ; ambiguous slots (1)=[7]
+  slot 7 shape=1024 candidates=['cell_projector.projector.9.bias', 'smiles_encoder._model.encoder.layers.0.fc1.bias', 'smiles_encoder._model.encoder.layers.1.fc1.bias', 'smiles_encoder._model.encoder.layers.2.fc1.bias', 'smiles_encoder._model.encoder.layers.3.fc1.bias', 'smiles_encoder._model.decoder.layers.0.fc1.bias', 'smiles_encoder._model.decoder.layers.1.fc1.bias', 'smiles_encoder._model.decoder.layers.2.fc1.bias', 'smiles_encoder._model.decoder.layers.3.fc1.bias', 'drug_projector.mlp.4.bias', 'drug_projector.residual_proj.bias', 'drug_projector.gate.0.bias']
+  T slots=12 C slots=29 ; T/C slots with more than one candidate: 0
+  chosen mapping is a valid placement in this scope: True
+  every T and C slot has exactly one candidate: True
+
+narrower scope (also drops the two frozen drug-branch groups): pert_model_minus_smiles_encoder_minus_drug_projector
+  fits=1 ; ambiguous slots=[]
+
+FITS_FULL_RAW=4738802796
+FITS_FULL_NOBUF=4738802796
+FITS_PERT_ONLY=12
+FITS_PERT_NO_DRUG=1
+AMBIGUOUS_SLOTS=[7]
+AMBIGUOUS_SLOTS_IN_T_OR_C=[]
+T_C_UNIQUE=True
+SE_FROZEN_IDENTICAL=238/239
+SE_NO_REFERENCE=['_bin_indices_cached']
+GLOBAL_STEP=155847
+
+STATUS: aligned
+NAMES: full checkpoint keys (model_state_dict), prefix pert_model.
+COLUMNS: idx<TAB>param<TAB>shape
+0	pert_model.cell_projector.projector.0.weight	2048x2048
+1	pert_model.cell_projector.projector.0.bias	2048
+2	pert_model.cell_projector.projector.3.weight	2048x2048
+3	pert_model.cell_projector.projector.3.bias	2048
+4	pert_model.cell_projector.projector.6.weight	2048x2048
+5	pert_model.cell_projector.projector.6.bias	2048
+6	pert_model.cell_projector.projector.9.weight	1024x2048
+7	pert_model.cell_projector.projector.9.bias	1024
+8	pert_model.gene_tokens_projector.mlp.0.weight	2048x7168
+9	pert_model.gene_tokens_projector.mlp.0.bias	2048
+10	pert_model.gene_tokens_projector.mlp.1.weight	2048
+11	pert_model.gene_tokens_projector.mlp.1.bias	2048
+12	pert_model.gene_tokens_projector.mlp.4.weight	1024x2048
+13	pert_model.gene_tokens_projector.mlp.4.bias	1024
+14	pert_model.gene_tokens_projector.residual_proj.weight	1024x7168
+15	pert_model.gene_tokens_projector.residual_proj.bias	1024
+16	pert_model.gene_tokens_projector.gate.0.weight	1024x7168
+17	pert_model.gene_tokens_projector.gate.0.bias	1024
+18	pert_model.transformer_backbone.layers.0.self_attn.q_proj.weight	1024x1024
+19	pert_model.transformer_backbone.layers.0.self_attn.k_proj.weight	1024x1024
+20	pert_model.transformer_backbone.layers.0.self_attn.v_proj.weight	1024x1024
+21	pert_model.transformer_backbone.layers.0.self_attn.o_proj.weight	1024x1024
+22	pert_model.transformer_backbone.layers.0.mlp.gate_proj.weight	2688x1024
+23	pert_model.transformer_backbone.layers.0.mlp.down_proj.weight	1024x2688
+24	pert_model.transformer_backbone.layers.0.mlp.up_proj.weight	2688x1024
+25	pert_model.transformer_backbone.layers.0.input_layernorm.weight	1024
+26	pert_model.transformer_backbone.layers.0.post_attention_layernorm.weight	1024
+27	pert_model.transformer_backbone.layers.1.self_attn.q_proj.weight	1024x1024
+28	pert_model.transformer_backbone.layers.1.self_attn.k_proj.weight	1024x1024
+29	pert_model.transformer_backbone.layers.1.self_attn.v_proj.weight	1024x1024
+30	pert_model.transformer_backbone.layers.1.self_attn.o_proj.weight	1024x1024
+31	pert_model.transformer_backbone.layers.1.mlp.gate_proj.weight	2688x1024
+32	pert_model.transformer_backbone.layers.1.mlp.down_proj.weight	1024x2688
+33	pert_model.transformer_backbone.layers.1.mlp.up_proj.weight	2688x1024
+34	pert_model.transformer_backbone.layers.1.input_layernorm.weight	1024
+35	pert_model.transformer_backbone.layers.1.post_attention_layernorm.weight	1024
+36	pert_model.transformer_backbone.layers.2.self_attn.q_proj.weight	1024x1024
+37	pert_model.transformer_backbone.layers.2.self_attn.k_proj.weight	1024x1024
+38	pert_model.transformer_backbone.layers.2.self_attn.v_proj.weight	1024x1024
+39	pert_model.transformer_backbone.layers.2.self_attn.o_proj.weight	1024x1024
+40	pert_model.transformer_backbone.layers.2.mlp.gate_proj.weight	2688x1024
+41	pert_model.transformer_backbone.layers.2.mlp.down_proj.weight	1024x2688
+42	pert_model.transformer_backbone.layers.2.mlp.up_proj.weight	2688x1024
+43	pert_model.transformer_backbone.layers.2.input_layernorm.weight	1024
+44	pert_model.transformer_backbone.layers.2.post_attention_layernorm.weight	1024
+45	pert_model.transformer_backbone.layers.3.self_attn.q_proj.weight	1024x1024
+46	pert_model.transformer_backbone.layers.3.self_attn.k_proj.weight	1024x1024
+47	pert_model.transformer_backbone.layers.3.self_attn.v_proj.weight	1024x1024
+48	pert_model.transformer_backbone.layers.3.self_attn.o_proj.weight	1024x1024
+49	pert_model.transformer_backbone.layers.3.mlp.gate_proj.weight	2688x1024
+50	pert_model.transformer_backbone.layers.3.mlp.down_proj.weight	1024x2688
+51	pert_model.transformer_backbone.layers.3.mlp.up_proj.weight	2688x1024
+52	pert_model.transformer_backbone.layers.3.input_layernorm.weight	1024
+53	pert_model.transformer_backbone.layers.3.post_attention_layernorm.weight	1024
+54	pert_model.transformer_backbone.norm.weight	1024
+55	pert_model.project_out.net.0.weight	1024x1024
+56	pert_model.project_out.net.0.bias	1024
+57	pert_model.project_out.net.3.weight	2048x1024
+58	pert_model.project_out.net.3.bias	2048
+59	pert_model.gene_decoder.decoder.0.weight	512x2048
+60	pert_model.gene_decoder.decoder.0.bias	512
+61	pert_model.gene_decoder.decoder.1.weight	512
+62	pert_model.gene_decoder.decoder.1.bias	512
+63	pert_model.gene_decoder.decoder.4.weight	1024x512
+64	pert_model.gene_decoder.decoder.4.bias	1024
+65	pert_model.gene_decoder.decoder.5.weight	1024
+66	pert_model.gene_decoder.decoder.5.bias	1024
+67	pert_model.gene_decoder.decoder.8.weight	2000x1024
+68	pert_model.gene_decoder.decoder.8.bias	2000

@@ -11,9 +11,10 @@
 | `02-resources.md` | 资源获取与落位（官方权重、词表、骨干、数据集） | 🔄 阶段一资源已齐；阶段二编码器（BioBERT / ESM-2 650M）待下 |
 | `03-reimplementation.md` | 缺失代码的重新实现（`pert_ca.py` 等补丁） | ✅ 已完成（`strict=True` 全键匹配） |
 | `04-demo-inference.md` | 3.1 demo 前向（最小闭环） | ✅ 已完成（rc=0，20.05 s / 12.7 GiB） |
-| `05-reproducibility.md` | 3.2 可复现性与生物学合理性 | ✅ 已完成（seed 逐位一致；发现药物信号偏弱待查） |
+| `05-reproducibility.md` | 3.2 可复现性与生物学合理性 | ✅ 已完成（seed 逐位一致；弱药物信号根因见 `08`） |
 | `06-benchmark.md` | 3.3 论文指标级复现 | ⬜ 待做（受 HVG 列表与缺失文件限制） |
-| `07-mapkg-pretraining.md` | 阶段二：MAP-KG 知识预训练 | ⬜ 待做（无外部阻塞） |
+| `07-mapkg-pretraining.md` | 阶段二：MAP-KG 知识预训练 | ⬜ 待做（无外部阻塞；按用户要求暂缓下载） |
+| `08-r15-attention-semantics.md` | R15：发布 ckpt 训练时的注意力语义判定（因果 vs 双向） | ✅ 已完成（H1 因果训练；Lead 复审通过） |
 
 ## 全局约定
 

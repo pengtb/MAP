@@ -14,7 +14,7 @@ MAP-KG（14 源, 187k drugs / 23k genes）        控制细胞 bulk → STATE SE
    ├─ Φ_mol   = MoleculeSTM    ├→ 对比对齐      ├─ gene_tokens_projector([T; ESM2]) → gene tokens
    └─ Φ_seq   = ESM-2 650M     ┘   → 融合       └─ Φ_mol(冻结)+drug_projector → drug token
         ↓                                                      ↓
-   知识编码器 mapkg_encoder_v3.pt                     [CLS | Drug | 2047 Genes] → Llama 10 层
+   知识编码器 mapkg_encoder_v3.pt                     [CLS | Drug | 2047 Genes] → Llama 4 层
                                                               ↓
                                                     project_out → gene_decoder → 2000 HVG 表达
 ```
@@ -34,7 +34,7 @@ MAP-KG（14 源, 187k drugs / 23k genes）        控制细胞 bulk → STATE SE
 | 输出投影 `project_out` | `ProjectOut(1024→2048)` | 1024 → 2048 | `pert_model.project_out.*`（4 键） |
 | 表达解码 `gene_decoder` | `LatentToGeneDecoder(latent 2048, gene 2000, hidden [512,1024])` | 2048 → 2000 | `pert_model.gene_decoder.*`（10 键） |
 
-## 3. 预测器前向（`demo.py` → `MAPmodel.forward` → `PerturbationEncoder.forward`）
+## 3. 预测器前向（`demo.py` → `MAPmodel.forward` → `PerturbationEncoder_ca.forward`，`pert_ca.py`）
 
 ```
 输入: ctrl_src [B,S,L] (基因 id), ctrl_counts [B,S,L] (表达), smiles [B], concs [B]
@@ -86,8 +86,8 @@ MAP-KG（14 源, 187k drugs / 23k genes）        控制细胞 bulk → STATE SE
 | `embed_tokens` 被清零 | `get_transformer_backbone` 里 `embed_tokens.weight.zero_()` 且 `requires_grad=False` → 32000 词表与结果无关 |
 | `nlayers` 冲突 | `configs/se600m.yaml` 写 8，代码硬编码 16，ckpt 与代码一致（16）→ 以代码为准 |
 | `hvg_info=None` | 发布 ckpt 训练时未用 HVG 信息 → 3.1/3.2 不需要 HVG 列表 |
-| **双向注意力失效** | `transformers 4.4x` 的 SDPA 里 `is_causal = True if causal_mask is None and q_len > 1 else False`，仓库用 `_update_causal_mask` 返回 `None` 的做法等于因果注意力（位置 0 只看到自己，drug/gene token 全部失效）。`pert_ca.py` 改为返回**全零加性 mask**（形状 `[B,1,q,q]`）方可恢复双向 |
+| **训练因果 / 当前双向对照** | `transformers 4.4x` 的 SDPA 里 `is_causal = True if causal_mask is None and q_len > 1 else False`，仓库用 `_update_causal_mask` 返回 `None` 的做法在这些版本中等同因果注意力。`plan/08` 已由优化器、权重统计和功能对照判定发布 ckpt **训练时为因果注意力（H1）**：位置 0 只看自己，drug/gene 路径未获有效训练。`pert_ca.py` 的全零加性 mask（`[B,1,q,q]`）目前仅提供双向对照，其 ~3e-4 换药差异不应作为药物响应证据；默认推断改为因果、双向改为显式开关另开任务 |
 | 标志位未初始化 | `model.py::forward` 读 `pert_model_hvg_ids_already_set`，上游 `__init__` 未定义（`hvg_info=None` 也会触发）→ 已补 `False` / `hvg_ids=None` |
 | 键名差异 | ckpt 用 `pert_model.smiles_encoder.*` + `pert_model.drug_projector.*`；现有 `pert.py` 用 `kg_smiles_encoder.smiles_encoder.*` → 由 `pert_ca.py` 解决（已实现，见 `plan/03-reimplementation.md`） |
-| RoPE 键 | ckpt 每层带 `self_attn.rotary_emb.inv_freq`，新版 transformers 把 RoPE 提到 model 级；`pert_ca.py` 给每层补了同名 buffer（零值、不参与计算），否则 `strict=True` 会报 unexpected 键 |
+| RoPE 键 | ckpt 每层带 `self_attn.rotary_emb.inv_freq`：4.31.0 及以前它是持久 buffer，4.37.2 已改为非持久，所以新版 `state_dict` 里没有它。`pert_ca.py` 把它重新注册为持久 buffer（初值 0，`strict=True` 加载后为 ckpt 值），只为通过严格加载。4.43.4 下 `LlamaModel` 用模型级 `self.rotary_emb` 生成 `position_embeddings`，而 `LlamaBidirectionalModel` 把它换成 `NoRoPE`（cos=1、sin=0），所以当前推断**不使用 RoPE**，每层 `inv_freq` 不参与计算。4.30.1 中 `NoRoPE` 不会被调用，训练时 RoPE 是开着的（见 `plan/08`） |
 | 冻结策略 | ESM-2 / MoleculeSTM 冻结；SE 在 `freeze_se=True` 时冻结 |

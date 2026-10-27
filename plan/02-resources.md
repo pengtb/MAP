@@ -37,6 +37,6 @@
 
 ## 待完成实现
 
-- ⬜ 下载 `se600m.safetensors` 到 `state_se600m/`
-- ⬜ 视阶段二需要下载 BioBERT / ESM-2 650M / MAP-KG CSV
-- ⬜ 所有资源路径尚未接入代码：`configs/se600m.yaml` 的 `all_embeddings`、`STMencoder_ddp.py` 的 ckpt/vocab 仍是占位路径 → 见 `03-reimplementation.md`
+- ✅ `se600m.safetensors` 已下载到 `state_se600m/` 并校验（见「已完成部分」）
+- ⬜ 视阶段二需要下载 BioBERT / ESM-2 650M / MAP-KG CSV（暂缓，先完成 `plan/08`）
+- ✅ 资源路径已接入代码：`configs/se600m.yaml` 的 `all_embeddings`、`STMencoder_ddp.py` 的 `MAP_MOLECULE_CKPT` / `MAP_BART_VOCAB`（见 `03-reimplementation.md`）

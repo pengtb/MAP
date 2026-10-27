@@ -1,0 +1,11 @@
+param,mapkg_key,shape_drug,shape_mapkg,shape_match,equal,maxabs_diff
+pert_model.drug_projector.gate.0.bias,smiles_projector.gate.0.bias,1024,1024,True,False,0.8105080425739288
+pert_model.drug_projector.gate.0.weight,smiles_projector.gate.0.weight,1024x256,1024x256,True,False,1.1638415455818176
+pert_model.drug_projector.mlp.0.bias,smiles_projector.mlp.0.bias,512,512,True,False,0.22804538905620575
+pert_model.drug_projector.mlp.0.weight,smiles_projector.mlp.0.weight,512x256,512x256,True,False,0.7104497849941254
+pert_model.drug_projector.mlp.1.bias,smiles_projector.mlp.1.bias,512,512,True,False,0.5820241570472717
+pert_model.drug_projector.mlp.1.weight,smiles_projector.mlp.1.weight,512,512,True,False,0.9372088015079498
+pert_model.drug_projector.mlp.4.bias,smiles_projector.mlp.4.bias,1024,1024,True,False,1.9391741715371609
+pert_model.drug_projector.mlp.4.weight,smiles_projector.mlp.4.weight,1024x512,1024x512,True,False,1.6342927888035774
+pert_model.drug_projector.residual_proj.bias,smiles_projector.residual_proj.bias,1024,1024,True,False,0.8886934593319893
+pert_model.drug_projector.residual_proj.weight,smiles_projector.residual_proj.weight,1024x256,1024x256,True,False,0.7251903797732666
