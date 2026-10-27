@@ -65,5 +65,6 @@ export CUDA_VISIBLE_DEVICES=0
 | 输出形状 | `input_ctrl_gene_ids`/`input_ctrl_expressions`/`output_pred_embeddings` 均 `(1,24,2048)`；`output_pred_hvg` `(1,24,2000)` |
 | 数值 | 无 NaN/Inf；`pred_hvg` 0–2.96（均值 0.13）；`pred_emb` L2≈0.44 |
 | 耗时/资源 | wall **20.05 s**、峰值显存 **12.7 GiB**、maxrss **8.15 GiB**、GPU 0 |
+| 备注 | 该组数值在双向注意力修复前测得；修复后耗时/显存基本不变，但输出数组内容已变化（见 plan/05） |
 
 产物：`work/demo_output/{input_ctrl_gene_ids,input_ctrl_expressions,output_pred_embeddings,output_pred_hvg}.npy` + `meta.json`
