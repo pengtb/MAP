@@ -38,6 +38,9 @@
 - ✅ issues：#4/#5/#6 均报缺文件，作者未回复；#1/#2 作者答复过（Drive 链接、minimal dataset、`epoch_3.pt` 为初步 ckpt）
 - ✅ `MAP-KG/` 与 `preprocess/` 代码完整；缺文件集中在 `MAP/`
 - ✅ 带宽实测 8–10 MB/s（b200 出口为 1 GbE）
+- ✅ 已读论文正文与 SI（Zotero 附件）：确认复用边界（BioBERT / MoleculeSTM / ESM-2 / STATE SE-600M / 基线 / 数据集 / 14 知识源），详见 PLAN §1.4
+- ✅ 已读图源数据 xlsx（`Q3ZZX7MA`，11 个 sheet 对应 Fig_1~Fig_5b，含每药每细胞系每方法的精确数值）→ 作为数值对照基准（PLAN §1.5）
+- ✅ **`bart_vocab.txt` 已解决**：取自 `chao1224/MoleculeSTM`，实测 523 token、index272=`C`、`MolEncTokenizer` 加载 `len=523`，与 ckpt 的 `emb.weight=(523,256)` 吻合 → 已放 `/data-tangc/models/map_repr/bart_vocab.txt`
 
 ---
 
@@ -45,7 +48,7 @@
 
 | # | 项 | 状态 | 影响 / 处置 |
 |---|---|---|---|
-| M1 | **`bart_vocab.txt`** | ❌ **唯一硬阻塞** | 分词器构造即失败；`transformer_backbone.embed_tokens=(32000,1024)` 与 `smiles_encoder._model.emb=(523,256)` 都绑定该词表，换表会静默错位 → 只能向作者索取 |
+| M1 | **`bart_vocab.txt`** | ✅ **已解决** | 来自 `chao1224/MoleculeSTM`（5,495 B，523 token，chem start=272），已放到 `/data-tangc/models/map_repr/`；残留风险：token 顺序靠同源性推断，需 demo 输出做生物学间接验证 |
 | M2 | `MAP/model/pert_ca.py` | 🔄 缺失但规格已定 | 见 §3 P1；不再是"不明结构" |
 | M3 | `se600m.safetensors` | ⬜ 待下载 | HF `arcinstitute/SE-600M`（2.66 GiB），走 hf-mirror |
 | M4 | `gene_embidx_mapping.torch` | ❓ 大概率不需要 | demo 路径只读 meta.pkl / control_indices / se_* |
@@ -99,7 +102,7 @@
 | **P0** | 打 P2、P3 | 无 |
 | **P1** | 下 `se600m.safetensors`（hf-mirror，2.66 GiB） | 无 |
 | **P1** | **加载验证**：用 `epoch_3.pt` 试 `load_state_dict`，确认 499 键全命中（不跑前向） | P0 补丁 |
-| **P2** | 拿 `bart_vocab.txt` → 跑 `demo.py`（1.1） | M1 |
+| **P2** | 跑 `demo.py`（1.1） | 只需 `se600m.safetensors`（M3） |
 | **P3** | 1.2 可复现性（固定 seed、换条件、与 minimal_dataset 对照） | 1.1 |
 | **P4** | 阶段二：MAP-KG 3 个 CSV → `train_resume.sh` | 无阻塞，可并行 |
 | **P5** | 1.3（Tahoe 路径） | HVG 列表 + 300 GB 数据 |
@@ -123,3 +126,4 @@ UV_PYTHON_INSTALL_MIRROR=https://mirror.nju.edu.cn/github-release/astral-sh/pyth
 |---|---|
 | 2026-10-26 | 建文件：环境搭建、issue 调研、缺失文件与风险 |
 | 2026-10-27 | Drive 权重到位（3 文件 5.4 GB）并完成结构核验；撤销 P4、R5 降级、M6/R13 解除；补入 `args` 与 260 键结构结论 |
+| 2026-10-27 | 读正文/SI/图源 xlsx：新增复用边界（PLAN §1.4）与图源数据（§1.5）；**M1 解除**（MoleculeSTM 词表 523 token 验证通过） |

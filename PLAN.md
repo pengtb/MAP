@@ -63,11 +63,37 @@
 
 ---
 
+### 1.4 组件来源：复用 vs 自研（据论文正文与 SI 核实）
+
+| 组件 | 论文标注出处 | 本仓库对应实现 | 复用方式 |
+|---|---|---|---|
+| 文本编码器 Φ_text | **BioBERT** [40]（bioRxiv 版正文 Methods） | MAP-KG 侧 `text_encoder`（`mapkg_encoder_v3.pt` 中 200 键） | 直接用预训练权重 |
+| 分子编码器 Φ_mol | **MoleculeSTM** [33]（Nat Mach Intell 2023） | `MAP/model/mega_molbart/` 与 `smiles_kg_encoder_v3.py` | **冻结权重** + 4 层可训练 MLP |
+| 蛋白编码器 Φ_seq | **ESM-2** [41] | MAP-KG 侧 `seq` 分支 | **冻结权重** + 4 层可训练 MLP |
+| 细胞基础模型 | **STATE SE-600M** [15] | `MAP/model/se.py` + `se600m.safetensors` | 直接加载 |
+| 语言 backbone | Llama（HuggingFace `transformers`） | `get_transformer_backbone('llama')` | 由 `LlamaConfig` 构建；`embed_tokens` 清零并冻结，不参与计算 |
+| 基线模型 | CRISP [19]、chemCPA [10]、PRnet [18]、trainMean [22,25]、STATE [15] | `MAP/baseline/`（chemCPA / XPert / PRnet） | 直接跑其公开实现 |
+| 数据集 | Tahoe-100M [23]（HF）、OP3 [24]（NeurIPS 竞赛）、SciPlex3 [2]（GEO）、ComboSciPlex [25] | — | 下载原始数据 |
+| 知识源 | 14 个公开库（SI Table S13/S21：ChEMBL/DrugBank/PubChem/Ensembl/HGNC/BindingDB/DrugCentral/STITCH/TTD/PrimeKG/BioGRID/HumanPPI/IntAct/STRING） | MAP-KG 数据（HF `RainGate/MAP-KG`） | 抓取并整合 |
+| 富集分析工具 | gseapy [49] + MSigDB GMT | — | 直接使用 |
+
+**代码级同源证据**（本次比对）：GitHub `chao1224/MoleculeSTM` 的 `MoleculeSTM/models/mega_molbart/` 与本仓库 `MAP/model/mega_molbart/` 高度一致——`megatron_bart.py` 均为 28,954 B、`util.py` 均为 599 B、`mega_mol_bart.py` 19,085 vs 19,069 B、`tokenizer.py` 15,073 vs 15,091 B；其 `MoleculeSTM/bart_vocab.txt`（5,495 B）即本仓库 `DEFAULT_VOCAB_PATH` 所指文件。
+
+**属于本文自研的部分**：MAP-KG 的构建与 14 源整合、知识驱动对比预训练策略（modality 对齐 + 关系级一致性）、预测器架构（cell/gene/drug token 序列 + Transformer 编码器）、两个 zero-shot 评估协议、GSEA 筛选流程与 A-549 候选药排序、SI Table 21/22 的图谱统计。
+
+### 1.5 论文图源数据（Zotero 附件 xlsx）
+
+`42256_2026_1286_MOESM4_ESM.xlsx`（45,409 B，Zotero 键 `Q3ZZX7MA`）：11 个 sheet，对应论文各图——`Fig_1 / Fig_2b / Fig_2c / Fig_2d / Fig_2e / Fig_3b / Fig_3c / Fig_3e / Fig_4a / Fig_5a / Fig_5b`，内含 505 个唯一字符串（行标签/列名）与 1190 处引用；列名形如 `Pearson Δ top-50 DE_{MAP,CRISP,ChemCPA,PRnet,trainMean,XPert}`，行为药物名（Balsalazide、Bergenin、…）。
+
+用途：给出每张图的**精确数值**（按药物 / 细胞系 / 指标 / 方法），可作为我们复现时的数值对照基准，无需从 SI 正文反推。
+
+---
+
 ## 2. 仍缺的东西
 
 | # | 项 | 状态 | 说明 |
 |---|---|---|---|
-| M1 | `bart_vocab.txt` | ❌ **唯一硬阻塞** | MolSTM BART 词表；`transformer_backbone.embed_tokens=(32000,1024)`、`smiles_encoder._model.emb=(523,256)` 均绑定该词表口径，换词表会静默错位 |
+| M1 | `bart_vocab.txt` | ✅ **已解决**（2026-10-27） | 取自公开仓库 `chao1224/MoleculeSTM` 的 `MoleculeSTM/bart_vocab.txt`（5,495 B）。实测：**523** 个 token、token0=`<PAD>`、index272=`C`（与 `DEFAULT_CHEM_TOKEN_START=272` 一致）、`MolEncTokenizer` 加载后 `len=523`，与 ckpt 的 `smiles_encoder._model.emb.weight=(523,256)` 吻合，且能正确切分 demo 用 SMILES。已拷贝到 `/data-tangc/models/map_repr/bart_vocab.txt`。残留不确定性：token 顺序无法 100% 证明同源，需用输出生物学合理性间接验证 |
 | M2 | `MAP/model/pert_ca.py` | 🔄 缺失但**已反推出口径**（见 §4） | 不是简单 re-export；承载 `PrimeKG_ver1` 分支 |
 | M3 | `se600m.safetensors` | ⬜ 待下载 | HF `arcinstitute/SE-600M`（2.66 GiB），走 hf-mirror |
 | M4 | `gene_embidx_mapping.torch` | ❓ 大概率不需要 | config 的 `ds_emb_mapping`；demo 路径只读 meta.pkl / control_indices / se_* |
@@ -213,7 +239,7 @@ self.drug_projector = ResidualProjector(256, 1024) # → pert_model.drug_project
 
 | 阻塞 | 影响 | 解法 |
 |---|---|---|
-| `bart_vocab.txt` 缺失 | 1.1 完全无法启动（分词器构造即失败） | 向作者索取（issue #5/#6；作者未回复） |
+| `bart_vocab.txt` 缺失 | ~~1.1 无法启动~~ | ✅ 已从 MoleculeSTM 公开仓库解决（见 §2 M1），并在 b200 上验证 523 token / chem start 272 |
 | `pert_ca.py` 缺失 + 键名差异 | 1.1 import 失败 / 加载不匹配 | 按 §4 自写 |
 | 2000 HVG 列表缺失 | 1.3 基因级指标不可复现（1.1/1.2 不受影响） | 向作者索取（issue #3/#7） |
 | `MAP/` 缺 5 个文件 | OP3/SciPlex3/Combo 路径不可用 | 走 Tahoe 路径，或向作者索取 |
@@ -226,6 +252,6 @@ self.drug_projector = ResidualProjector(256, 1024) # → pert_model.drug_project
 1. 按 §4 完成重实现（`pert_ca.py`、`STMencoder_ddp.py`、`configs/se600m.yaml`）
 2. 下 `se600m.safetensors`（HF）
 3. **加载验证**（不跑前向）：用 `epoch_3.pt` 试 `load_state_dict`，确认 499 键全部命中
-4. 拿到 `bart_vocab.txt` → 跑 demo（3.1）
+4. 跑 demo（3.1）：词表已就绪（§2 M1），仅剩 `se600m.safetensors` 待下载
 5. 3.2 → 3.3
 6. 阶段二（无外部阻塞，可并行）
