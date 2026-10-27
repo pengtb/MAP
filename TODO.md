@@ -53,7 +53,7 @@
 |---|---|---|---|
 | M1 | **`bart_vocab.txt`** | ✅ **已解决** | 来自 `chao1224/MoleculeSTM`（5,495 B，523 token，chem start=272），已放到 `/data-tangc/models/map_repr/molecule_stm/`；残留风险：token 顺序靠同源性推断，需 demo 输出做生物学间接验证 |
 | M2 | `MAP/model/pert_ca.py` | 🔄 缺失但规格已定 | 见 §3 P1；不再是"不明结构" |
-| M3 | `se600m.safetensors` | ⬜ 待下载 | HF `arcinstitute/SE-600M`（2.66 GiB），走 hf-mirror |
+| M3 | `se600m.safetensors` | ✅ 已下载 | `state_se600m/`，2,860,276,816 B（2.66 GiB），sha256 `3ebec58bd9e9c07f…` 与 HF LFS etag 一致；238 张量 / 16 层 |
 | M4 | `gene_embidx_mapping.torch` | ❓ 大概率不需要 | demo 路径只读 meta.pkl / control_indices / se_* |
 | M5 | 2000 HVG 有序列表 | ⚠️ 仅影响 1.3 | ckpt 训练时 `hvg_info=null`，1.1/1.2 不需要；1.3 基因级指标仍需且**不可重生** |
 | M6 | `molecule_model.pth` | ✅ 已解决 | 用 `mapkg_encoder_v3.pt` 的 `smiles_encoder.*`（同一权重） |
@@ -103,7 +103,7 @@
 |---|---|---|
 | **P0** | 通读 `pert.py:75+`（forward / encode_cells / encode_genes / encode_drug），写出 P1 的 `pert_ca.py` | 无 |
 | **P0** | 打 P2、P3 | 无 |
-| **P1** | 下 `se600m.safetensors`（hf-mirror，2.66 GiB） | 无 |
+| ~~P1~~ | ~~下 `se600m.safetensors`~~ | ✅ 已完成（sha256 校验通过） |
 | **P1** | **加载验证**：用 `epoch_3.pt` 试 `load_state_dict`，确认 499 键全命中（不跑前向） | P0 补丁 |
 | **P2** | 跑 `demo.py`（1.1） | 只需 `se600m.safetensors`（M3） |
 | **P3** | 1.2 可复现性（固定 seed、换条件、与 minimal_dataset 对照） | 1.1 |
@@ -131,3 +131,4 @@ UV_PYTHON_INSTALL_MIRROR=https://mirror.nju.edu.cn/github-release/astral-sh/pyth
 | 2026-10-27 | Drive 权重到位（3 文件 5.4 GB）并完成结构核验；撤销 P4、R5 降级、M6/R13 解除；补入 `args` 与 260 键结构结论 |
 | 2026-10-27 | 读正文/SI/图源 xlsx：新增复用边界（PLAN §1.4）与图源数据（§1.5）；**M1 解除**（MoleculeSTM 词表 523 token 验证通过） |
 | 2026-10-27 | 目录重组：权重按 encoder/基础模型分子目录（`predictor/`、`mapkg_encoder/`、`molecule_stm/`、`state_se600m/`、`esm2_gene/`）；`PLAN.md` 拆分为 `plan/01~07 + README`；新增 `design/architecture.md` |
+| 2026-10-27 | `se600m.safetensors` 经 hf-mirror 下载完成并校验（2,860,276,816 B（2.66 GiB），sha256 与 HF etag 一致）；M3/P1 关闭 |

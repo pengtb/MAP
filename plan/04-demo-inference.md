@@ -13,6 +13,7 @@
 | 词表 | `/data-tangc/models/map_repr/molecule_stm/bart_vocab.txt` | ✅ |
 | 基因嵌入表 | `/data-tangc/models/map_repr/esm2_gene/Homo_sapiens...ESM2.pt` | ✅ |
 | demo 输入（A-549） | `MAP/data/minimal_dataset.zip` → `preprocessed/CVCL_0023/{CVCL_0023_meta.pkl, control_indices.json}`、`preprocessed_se_inputs_memmap/CVCL_0023/{se_shape.json, se_gene_ids.npy, se_expr.npy}` | ✅ 需解压 |
+| STATE 骨干 `se600m.safetensors` | `/data-tangc/models/map_repr/state_se600m/` | ✅ 2,860,276,816 B（2.66 GiB），sha256 校验通过，238 张量 / 16 层 |
 | 运行环境 | `.venv`（Python 3.11.14 + torch 2.8.0+cu128） | ✅ |
 
 ## 已完成部分
@@ -24,15 +25,13 @@
 
 ## 待获取资源
 
-| 资源 | 目标位置 | 说明 |
-|---|---|---|
-| `se600m.safetensors` | `/data-tangc/models/map_repr/state_se600m/` | HF `arcinstitute/SE-600M`，2.66 GiB；**唯一缺口** |
+无。`se600m.safetensors` 已下载并通过 sha256 校验（见「已有资源」）。
 
 ## 待完成实现
 
 1. ⬜ 解压 `MAP/data/minimal_dataset.zip` 到工作目录
 2. ⬜ 完成 `03-reimplementation.md` 的 P1/P2/P3 补丁
-3. ⬜ 下载 `se600m.safetensors`
+3. ✅ 已下载 `se600m.safetensors`（sha256 与 HF 元数据一致）
 4. ⬜ 运行：
    ```
    python demo.py --ckpt .../predictor/epoch_3.pt --cell_line CVCL_0023 \

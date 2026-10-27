@@ -8,7 +8,7 @@
 | 文件 | 步骤 | 状态 |
 |---|---|---|
 | `01-environment.md` | 运行环境（venv / torch / 依赖 / GPU 验证） | ✅ 已完成 |
-| `02-resources.md` | 资源获取与落位（官方权重、词表、骨干、数据集） | 🔄 部分完成（仅差 `se600m.safetensors` 与阶段二编码器） |
+| `02-resources.md` | 资源获取与落位（官方权重、词表、骨干、数据集） | 🔄 阶段一资源已齐；阶段二编码器（BioBERT / ESM-2 650M）待下 |
 | `03-reimplementation.md` | 缺失代码的重新实现（`pert_ca.py` 等补丁） | ⬜ 待做（规格已定） |
 | `04-demo-inference.md` | 3.1 demo 前向（最小闭环） | ⬜ 待做 |
 | `05-reproducibility.md` | 3.2 可复现性与生物学合理性 | ⬜ 待做 |
@@ -33,7 +33,7 @@
 | `predictor/` | `epoch_3.pt` | MAP 预测器主 checkpoint |
 | `mapkg_encoder/` | `mapkg_encoder_v3.pt` | MAP-KG 预训练编码器（知识侧） |
 | `molecule_stm/` | `bart_vocab.txt` | MoleculeSTM 分词器词表（523 token） |
-| `state_se600m/` | `se600m.safetensors`（待下载） | STATE SE-600M 细胞基础模型 |
+| `state_se600m/` | `se600m.safetensors`（已就绪，sha256 校验通过） | STATE SE-600M 细胞基础模型 |
 | `esm2_gene/` | `Homo_sapiens.GRCh38.gene_symbol_to_embedding_ESM2.pt` | 基因 ESM-2 嵌入表（19790×5120） |
 | `biobert/` | 待获取 | MAP-KG 文本编码器 Φ_text |
 | `esm2_protein/` | 待获取 | MAP-KG 蛋白序列编码器 Φ_seq |
