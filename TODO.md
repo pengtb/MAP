@@ -3,6 +3,9 @@
 > 位置：`/data-tangc/dev/ptb/map-repro/TODO.md`｜关联 `PLAN.md`（§4 为重新实现规格）
 > 最后更新：2026-10-27（补入 checkpoint 结构核验与 `args` 结论，P4 撤销）
 
+> 文档结构（2026-10-27 起）：分步计划见 `plan/`（`01`~`07`），架构见 `design/architecture.md`；原 `PLAN.md` 已拆分并删除。
+> 资源根目录：`/data-tangc/models/map_repr/{predictor, mapkg_encoder, molecule_stm, state_se600m, esm2_gene}`（另有 `biobert/`、`esm2_protein/` 待填充）。
+
 图例：✅ 完成 ｜ 🔄 进行中 ｜ ⬜ 待做 ｜ ⚠️ 风险 ｜ ❌ 阻塞（等外部输入）
 
 ---
@@ -27,7 +30,7 @@
 - ✅ `mapkg_encoder_v3.pt`（1.05 GiB）：419 张量，含 `smiles_encoder` 176 / `smiles_projector` 10 / `text_encoder` 200 / `fusion_module` 12 等
 - ✅ `Homo_sapiens...ESM2.pt`（392 MiB）：dict，19790 基因 × 5120 维
 
-### 1.4 已完成的核验（PLAN §1.1、§4 的事实来源）
+### 1.4 已完成的核验（详见 plan/02-resources.md、plan/03-reimplementation.md）
 - ✅ 导出 `epoch_3.pt['args']`：6 个细胞系（CVCL_0023/0480/0069/0131/1098/1056）、`smile_encoder="PrimeKG_ver1"`、**`hvg_info=null`**、`set_size=24`、`epochs=400`、`lr=1e-5`、`de_topk=50`、amp bf16
 - ✅ 全仓 grep `PrimeKG`：仅 `demo.py:80` 与 `train_sciplex.py:118` 两处默认值，**无实现**；`pert.py:117` 只认 `MAP-KG`，其余 `exit()`
 - ✅ 键比对：`mapkg_encoder_v3.pt` 的 `smiles_encoder.*` 与 ckpt 的 `pert_model.smiles_encoder.*` **176/176 完全一致，零形状差异**（`emb.weight=(523,256)`）
@@ -38,9 +41,9 @@
 - ✅ issues：#4/#5/#6 均报缺文件，作者未回复；#1/#2 作者答复过（Drive 链接、minimal dataset、`epoch_3.pt` 为初步 ckpt）
 - ✅ `MAP-KG/` 与 `preprocess/` 代码完整；缺文件集中在 `MAP/`
 - ✅ 带宽实测 8–10 MB/s（b200 出口为 1 GbE）
-- ✅ 已读论文正文与 SI（Zotero 附件）：确认复用边界（BioBERT / MoleculeSTM / ESM-2 / STATE SE-600M / 基线 / 数据集 / 14 知识源），详见 PLAN §1.4
-- ✅ 已读图源数据 xlsx（`Q3ZZX7MA`，11 个 sheet 对应 Fig_1~Fig_5b，含每药每细胞系每方法的精确数值）→ 作为数值对照基准（PLAN §1.5）
-- ✅ **`bart_vocab.txt` 已解决**：取自 `chao1224/MoleculeSTM`，实测 523 token、index272=`C`、`MolEncTokenizer` 加载 `len=523`，与 ckpt 的 `emb.weight=(523,256)` 吻合 → 已放 `/data-tangc/models/map_repr/bart_vocab.txt`
+- ✅ 已读论文正文与 SI（Zotero 附件）：确认复用边界（BioBERT / MoleculeSTM / ESM-2 / STATE SE-600M / 基线 / 数据集 / 14 知识源），详见 design/architecture.md 与 plan/02-resources.md
+- ✅ 已读图源数据 xlsx（`Q3ZZX7MA`，11 个 sheet 对应 Fig_1~Fig_5b，含每药每细胞系每方法的精确数值）→ 作为数值对照基准（见 plan/02-resources.md）
+- ✅ **`bart_vocab.txt` 已解决**：取自 `chao1224/MoleculeSTM`，实测 523 token、index272=`C`、`MolEncTokenizer` 加载 `len=523`，与 ckpt 的 `emb.weight=(523,256)` 吻合 → 已放 `/data-tangc/models/map_repr/molecule_stm/bart_vocab.txt`
 
 ---
 
@@ -48,7 +51,7 @@
 
 | # | 项 | 状态 | 影响 / 处置 |
 |---|---|---|---|
-| M1 | **`bart_vocab.txt`** | ✅ **已解决** | 来自 `chao1224/MoleculeSTM`（5,495 B，523 token，chem start=272），已放到 `/data-tangc/models/map_repr/`；残留风险：token 顺序靠同源性推断，需 demo 输出做生物学间接验证 |
+| M1 | **`bart_vocab.txt`** | ✅ **已解决** | 来自 `chao1224/MoleculeSTM`（5,495 B，523 token，chem start=272），已放到 `/data-tangc/models/map_repr/molecule_stm/`；残留风险：token 顺序靠同源性推断，需 demo 输出做生物学间接验证 |
 | M2 | `MAP/model/pert_ca.py` | 🔄 缺失但规格已定 | 见 §3 P1；不再是"不明结构" |
 | M3 | `se600m.safetensors` | ⬜ 待下载 | HF `arcinstitute/SE-600M`（2.66 GiB），走 hf-mirror |
 | M4 | `gene_embidx_mapping.torch` | ❓ 大概率不需要 | demo 路径只读 meta.pkl / control_indices / se_* |
@@ -127,3 +130,4 @@ UV_PYTHON_INSTALL_MIRROR=https://mirror.nju.edu.cn/github-release/astral-sh/pyth
 | 2026-10-26 | 建文件：环境搭建、issue 调研、缺失文件与风险 |
 | 2026-10-27 | Drive 权重到位（3 文件 5.4 GB）并完成结构核验；撤销 P4、R5 降级、M6/R13 解除；补入 `args` 与 260 键结构结论 |
 | 2026-10-27 | 读正文/SI/图源 xlsx：新增复用边界（PLAN §1.4）与图源数据（§1.5）；**M1 解除**（MoleculeSTM 词表 523 token 验证通过） |
+| 2026-10-27 | 目录重组：权重按 encoder/基础模型分子目录（`predictor/`、`mapkg_encoder/`、`molecule_stm/`、`state_se600m/`、`esm2_gene/`）；`PLAN.md` 拆分为 `plan/01~07 + README`；新增 `design/architecture.md` |
